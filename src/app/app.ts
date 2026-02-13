@@ -21,11 +21,14 @@ export class App {
     //Atributo para armazenar os dados da consulta de clientes
     clientes = signal<any[]>([]);
 
+    //Abritudo para guardar os dados do cliente editado
+    cliente = signal<any | null>(null); //Valor inicial é null (vazio)
+
     //Atributo para guardar o endereço da API
     private apiUrl = 'http://localhost:8081/api/v1/clientes';
 
     //Criando a estrutura do formulário de cadastro de clientes
-    formCadastro = new FormGroup({ //formulário
+    formCadastroEdicao = new FormGroup({ //formulário
       nome : new FormControl(''), //campo 'nome'
       email : new FormControl(''), //campo 'email'
       telefone : new FormControl('') //campo 'telefone'
@@ -37,14 +40,34 @@ export class App {
     });
 
     //Função para realizar o cadastro do cliente
-    cadastrar() {
+    salvar() {
 
-      //Fazendo uma requisição HTTP POST para a API
-      this.http.post(this.apiUrl, this.formCadastro.value, { responseType: 'text' })
+      //Verificar se nenhum cliente foi selecionado para edição
+      if (this.cliente() == null) {//Realizar o cadastro de um novo cliente
+
+        //Fazendo uma requisição HTTP POST para a API
+      this.http.post(this.apiUrl, this.formCadastroEdicao.value, { responseType: 'text' })
         .subscribe((mensagem) => { //Aguardando o retorno da requisição
             alert(mensagem); //Exibir a mensagem para o usuário
-            this.formCadastro.reset(); //Limpar o formulário
+            this.formCadastroEdicao.reset(); //Limpar o formulário
         }); 
+
+      }
+      else {
+        //Fazendo a requisição HTTP PUT para a API, passando o ID do cliente a ser editado
+        this.http.put(this.apiUrl + '/' + this.cliente()!.id, this.formCadastroEdicao.value, { responseType: 'text' })
+        .subscribe((mensagem) => {
+          alert(mensagem); //Exibir a mensagem para o usuário
+          this.formCadastroEdicao.reset(); //Limpar o forumário
+          this.consultar(); //Fazendo uma nova consulta
+          this.cliente.set(null); //Fazendo nova consulta
+          this.cliente.set(null); //Voltar para a opção de cadastro
+
+        });
+
+      }
+
+      
     }
 
 
@@ -58,5 +81,33 @@ export class App {
         }); //Aguardando o retorno da requisição e exibindo os clientes encontrados
 
     }
+
+    //Funçao para realizar a exclusão de um cliente
+    excluir(id : number) {
+
+      //Verificar se o usuário deseja realmente excluir um cliente
+      var confirmacao = window.confirm('Tem certeza que deseja excluir este cliente?');
+      if (! confirmacao) {
+        return; //Cancelar a exclusão
+
+      }
+
+      //Fazendo uma requiesição HTTP DELETE para a API
+      this.http.delete(this.apiUrl + '/' + id, { responseType: 'text'}).subscribe((mensagem) => {
+        alert(mensagem); //Exibir a mensagem obtida
+        this.consultar(); //Executando uma nova consulta
+
+    });
+  }
+
+  editar(cliente: any) {
+
+    //Armazenar os dados do cliente selecionado no sinal 'cliente'
+    this.cliente.set(cliente);
+
+
+    //Preencher os campos do formulário de edição com os dados do cliente selecionado
+    this.formCadastroEdicao.patchValue(cliente);
+  }
   
 }
